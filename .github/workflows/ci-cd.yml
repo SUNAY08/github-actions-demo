@@ -33,7 +33,7 @@ jobs:
           cat ~/.ssh/id_rsa.pub || echo "Public key not available"
 
           # Add EC2 host to known_hosts
-          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H "${{ secrets.AWS_HOST }}" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
       # Debug: Show environment variables
@@ -46,15 +46,15 @@ jobs:
       # Test SSH Connection
       - name: Test SSH Connection
         run: |
-          ssh -v -o StrictHostKeyChecking=no ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful'"
+          ssh -v -o StrictHostKeyChecking=no "${{ secrets.AWS_USERNAME }}"@"${{ secrets.AWS_HOST }}" "echo 'SSH Connection Successful'"
 
       # Deploy: Pull latest changes, install dependencies, and restart app
       - name: Deploy Application
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no "${{ secrets.AWS_USERNAME }}"@"${{ secrets.AWS_HOST }}" << 'EOF'
             # Ensure app directory exists
-            mkdir -p /home/${{ secrets.AWS_USERNAME }}/app
-            cd /home/${{ secrets.AWS_USERNAME }}/app || exit 1
+            mkdir -p /home/"${{ secrets.AWS_USERNAME }}"/app
+            cd /home/"${{ secrets.AWS_USERNAME }}"/app || exit 1
 
             # Ensure Git is installed
             if ! command -v git &> /dev/null; then
