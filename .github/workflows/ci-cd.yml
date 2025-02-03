@@ -37,14 +37,29 @@ jobs:
 
       - name: Setup SSH Key and Configure Known Hosts
         run: |
+          # Ensure SSH directory exists
           mkdir -p ~/.ssh
-          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 700 ~/.ssh
+
+          # Decode the private key and add it securely to ssh-agent
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" | tr -d '\r' | awk '{gsub(/\\n/,"\n")}1' > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+
+          # Start SSH agent and add the key
+          eval $(ssh-agent -s)
+          ssh-add ~/.ssh/id_rsa
+
+          # Add AWS host to known hosts
           ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Test SSH Connection
+        run: |
+          ssh -o StrictHostKeyChecking=no -v ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful'"
 
       - name: Deploy Application to AWS
         run: |
-          ssh ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} << 'EOF'
+          ssh -o StrictHostKeyChecking=no ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} << 'EOF'
             cd /home/ubuntu/app  # Change to your app directory
             git pull origin main  # Pull the latest code
             npm install           # Install dependencies
