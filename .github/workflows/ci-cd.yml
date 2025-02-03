@@ -1,16 +1,12 @@
 name: CI/CD Pipeline
 
-on: 
-  push:
-    branches:
-      - main  
-  pull_request:
+on: [push, pull_request]
 
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
@@ -18,13 +14,13 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Run tests
+      - name: Run Tests
         run: npm test
 
-      - name: Upload coverage report
+      - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -35,26 +31,22 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     environment: production
-
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up SSH Key
+      - name: Setup SSH Key and Configure Known Hosts
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Add AWS Host to Known Hosts
-        run: ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
-        
-
-      - name: Deploy to AWS EC2
+      - name: Deploy Application to AWS
         run: |
           ssh ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} << 'EOF'
-            cd /home/${{ secrets.AWS_USERNAME }}/app  # Change path if needed
-            git pull origin main
-            npm install
-            pm2 restart server || pm2 start server.js --name "my-app"
+            cd /home/ubuntu/app  # Change to your app directory
+            git pull origin main  # Pull the latest code
+            npm install           # Install dependencies
+            pm2 restart all       # Restart the app with PM2
           EOF
