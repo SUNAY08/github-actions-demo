@@ -42,6 +42,7 @@ jobs:
           echo "AWS_USERNAME: ${{ secrets.AWS_USERNAME }}"
           echo "AWS_HOST: ${{ secrets.AWS_HOST }}"
           echo "AWS_REGION: ${{ secrets.AWS_REGION }}"
+          echo "AWS_PORT: ${{ secrets.AWS_PORT }}"  # Ensure port is provided
 
       # Test SSH Connection
       - name: Test SSH Connection
@@ -59,8 +60,8 @@ jobs:
             echo "Deployment complete!"
           EOF
 
-      # Test API Endpoint
-      - name: Test API
+      # Test API Health Check
+      - name: Test API Health
         run: |
           response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health")
           if [ "$response" -eq 200 ]; then
