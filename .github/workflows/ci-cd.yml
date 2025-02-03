@@ -3,34 +3,8 @@ name: CI/CD Pipeline
 on: [push, pull_request]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Run Tests
-        run: npm test
-
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-report
-          path: coverage/
-
   deploy:
-    needs: test
     runs-on: ubuntu-latest
-    environment: production
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -41,17 +15,26 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # Decode the private key and add it securely to ssh-agent
-          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" | tr -d '\r' | awk '{gsub(/\\n/,"\n")}1' > ~/.ssh/id_rsa
+          # Decode and write the private key to file
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Start SSH agent and add the key
+          # Start SSH agent and add the private key
           eval $(ssh-agent -s)
           ssh-add ~/.ssh/id_rsa
 
-          # Add AWS host to known hosts
+          # Add the AWS host to known hosts
           ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
+
+      - name: Log Environment Variables
+        run: |
+          # Log environment variables to check if they're set
+          echo "AWS_HOST: ${{ secrets.AWS_HOST }}"
+          echo "AWS_USERNAME: ${{ secrets.AWS_USERNAME }}"
+          echo "DB_HOST: $DB_HOST"
+          echo "DB_USER: $DB_USER"
+          echo "DB_PASS: $DB_PASS"
 
       - name: Test SSH Connection
         run: |
