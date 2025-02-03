@@ -42,31 +42,64 @@ jobs:
           echo "AWS_USERNAME: ${{ secrets.AWS_USERNAME }}"
           echo "AWS_HOST: ${{ secrets.AWS_HOST }}"
           echo "AWS_REGION: ${{ secrets.AWS_REGION }}"
-          echo "AWS_PORT: ${{ secrets.AWS_PORT }}"  # Ensure port is provided
 
       # Test SSH Connection
       - name: Test SSH Connection
         run: |
           ssh -v -o StrictHostKeyChecking=no ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful'"
 
-      # Deploy: Pull latest changes and restart app
+      # Deploy: Pull latest changes, install dependencies, and restart app
       - name: Deploy Application
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} << 'EOF'
-            cd /home/${{ secrets.AWS_USERNAME }}/app  # Change this to your actual project directory
-            git pull origin main  # Pull latest code
-            npm install  # Install dependencies
-            pm2 restart all  # Restart the app (adjust for your process manager)
+            # Ensure app directory exists
+            mkdir -p /home/${{ secrets.AWS_USERNAME }}/app
+            cd /home/${{ secrets.AWS_USERNAME }}/app || exit 1
+
+            # Ensure Git is installed
+            if ! command -v git &> /dev/null; then
+              echo "Git not found, installing..."
+              sudo apt update && sudo apt install -y git
+            fi
+
+            # Clone repo if it's missing
+            if [ ! -d ".git" ]; then
+              echo "Repository not found, cloning..."
+              git clone https://github.com/SUNAY08/github-actions-demo.git .
+            else
+              echo "Pulling latest changes..."
+              git pull origin main
+            fi
+
+            # Ensure Node.js and npm are installed
+            if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
+              echo "Node.js and npm not found, installing..."
+              curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+              sudo apt install -y nodejs
+            fi
+
+            # Install dependencies
+            npm install
+
+            # Ensure pm2 is installed
+            if ! command -v pm2 &> /dev/null; then
+              echo "PM2 not found, installing..."
+              npm install -g pm2
+            fi
+
+            # Start or restart the app
+            pm2 start app.js --name my-app || pm2 restart my-app
+
             echo "Deployment complete!"
           EOF
 
-    #   # Test API Health Check
-    #   - name: Test API Health
-    #     run: |
-    #       response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health")
-    #       if [ "$response" -eq 200 ]; then
-    #         echo "API is healthy!"
-    #       else
-    #         echo "API health check failed with status code $response"
-    #         exit 1
-    #       fi
+      # Health check of the deployed application
+      - name: Check API Health
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health")
+          if [ "$response" -eq 200 ]; then
+            echo "API is healthy!"
+          else
+            echo "API health check failed with status code $response"
+            exit 1
+          fi
