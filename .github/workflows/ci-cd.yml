@@ -93,13 +93,35 @@ jobs:
             echo "Deployment complete!"
           EOF
 
-      # Health check of the deployed application
+# Health check of the deployed application
       - name: Check API Health
         run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health")
-          if [ "$response" -eq 200 ]; then
-            echo "UP"
-          else
-            echo "API health check failed with status code $response"
-            exit 1
-          fi
+          # Wait for the application to start (give it some time)
+          sleep 10
+          
+          # Add some debug information
+          echo "Attempting to reach health endpoint..."
+          echo "URL: http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health"
+          
+          # Try multiple times with debugging
+          for i in {1..5}; do
+            echo "Attempt $i of 5..."
+            
+            # Make the curl request with verbose output for debugging
+            response=$(curl -v -s -o /dev/null -w "%{http_code}" "http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health" 2>&1)
+            status_code=$(echo "$response" | tail -n 1)
+            
+            echo "Response: $response"
+            echo "Status code: $status_code"
+            
+            if [ "$status_code" -eq 200 ]; then
+              echo "UP"
+              exit 0
+            fi
+            
+            echo "Waiting before next attempt..."
+            sleep 5
+          done
+          
+          echo "API health check failed after 5 attempts"
+          exit 1
