@@ -1,5 +1,10 @@
 name: CI/CD Pipeline
-on: [push, pull_request]
+
+on: 
+  push:
+    branches:
+      - main  
+  pull_request:
 
 jobs:
   test:
@@ -20,7 +25,7 @@ jobs:
         run: npm test
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4  # Updated to v4
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: coverage-report
@@ -30,6 +35,25 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     environment: production
+
     steps:
-      - name: Simulate deployment
-        run: echo "Deploying to production..."
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+      - name: Add AWS Host to Known Hosts
+        run: ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to AWS EC2
+        run: |
+          ssh ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} << 'EOF'
+            cd /home/${{ secrets.AWS_USERNAME }}/app  # Change path if needed
+            git pull origin main
+            npm install
+            pm2 restart server || pm2 start server.js --name "my-app"
+          EOF
