@@ -32,9 +32,6 @@ jobs:
           # Log environment variables to check if they're set
           echo "AWS_HOST: ${{ secrets.AWS_HOST }}"
           echo "AWS_USERNAME: ${{ secrets.AWS_USERNAME }}"
-          echo "DB_HOST: $DB_HOST"
-          echo "DB_USER: $DB_USER"
-          echo "DB_PASS: $DB_PASS"
 
       - name: Test SSH Connection
         run: |
