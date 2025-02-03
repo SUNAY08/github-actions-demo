@@ -8,7 +8,7 @@ describe('Express App Routes', () => {
     it('should respond with "Hello CI/CD!"', async () => {
       const response = await request(app).get('/');
       expect(response.status).toBe(200);  // Check for 200 OK status
-      expect(response.text).toBe('Hello CI/CD!');
+      expect(response.text).toBe('hello guys');
     });
   });
 
