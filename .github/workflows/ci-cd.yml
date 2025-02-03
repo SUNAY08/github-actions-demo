@@ -1,47 +1,60 @@
-name: CI/CD Pipeline
+name: Deploy to EC2
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main  # Change this if using a different branch
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Ensure SSH Key is properly set up
       - name: Setup SSH Key and Configure Known Hosts
         run: |
           # Ensure SSH directory exists
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
-          # Decode and write the private key to file
-          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" | base64 -d > ~/.ssh/id_rsa
+          # Decode and write the private key to ~/.ssh/id_rsa
+          echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
 
-          # Start SSH agent and add the private key
+          # Start SSH agent and add the key
           eval $(ssh-agent -s)
           ssh-add ~/.ssh/id_rsa
 
-          # Add the AWS host to known hosts
+          # Debug: Print SSH key details
+          ls -lah ~/.ssh/
+          cat ~/.ssh/id_rsa.pub || echo "Public key not available"
+
+          # Add EC2 host to known_hosts
           ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
+      # Debug: Show environment variables
       - name: Log Environment Variables
         run: |
-          # Log environment variables to check if they're set
-          echo "AWS_HOST: ${{ secrets.AWS_HOST }}"
           echo "AWS_USERNAME: ${{ secrets.AWS_USERNAME }}"
+          echo "AWS_HOST: ${{ secrets.AWS_HOST }}"
+          echo "AWS_REGION: ${{ secrets.AWS_REGION }}"
 
+      # Test SSH Connection
       - name: Test SSH Connection
         run: |
-          ssh -o StrictHostKeyChecking=no -v ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful'"
+          ssh -v -o StrictHostKeyChecking=no ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} "echo 'SSH Connection Successful'"
 
-      - name: Deploy Application to AWS
+      # Deploy: Pull latest changes and restart app
+      - name: Deploy Application
         run: |
           ssh -o StrictHostKeyChecking=no ${{ secrets.AWS_USERNAME }}@${{ secrets.AWS_HOST }} << 'EOF'
-            cd /home/ubuntu/app  # Change to your app directory
-            git pull origin main  # Pull the latest code
-            npm install           # Install dependencies
-            pm2 restart all       # Restart the app with PM2
+            cd /home/${{ secrets.AWS_USERNAME }}/app  # Change this to your actual project directory
+            git pull origin main  # Pull latest code
+            npm install  # Install dependencies
+            pm2 restart all  # Restart the app (adjust for your process manager)
+            echo "Deployment complete!"
           EOF
