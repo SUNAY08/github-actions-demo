@@ -58,3 +58,14 @@ jobs:
             pm2 restart all  # Restart the app (adjust for your process manager)
             echo "Deployment complete!"
           EOF
+
+      # Test API Endpoint
+      - name: Test API
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health")
+          if [ "$response" -eq 200 ]; then
+            echo "API is healthy!"
+          else
+            echo "API health check failed with status code $response"
+            exit 1
+          fi
