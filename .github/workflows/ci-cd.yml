@@ -48,6 +48,7 @@ jobs:
 
       - name: Add AWS Host to Known Hosts
         run: ssh-keyscan -H ${{ secrets.AWS_HOST }} >> ~/.ssh/known_hosts
+        
 
       - name: Deploy to AWS EC2
         run: |
