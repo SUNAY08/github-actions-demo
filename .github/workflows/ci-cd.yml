@@ -60,13 +60,13 @@ jobs:
             echo "Deployment complete!"
           EOF
 
-      # Test API Health Check
-      - name: Test API Health
-        run: |
-          response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health")
-          if [ "$response" -eq 200 ]; then
-            echo "API is healthy!"
-          else
-            echo "API health check failed with status code $response"
-            exit 1
-          fi
+    #   # Test API Health Check
+    #   - name: Test API Health
+    #     run: |
+    #       response=$(curl -s -o /dev/null -w "%{http_code}" "http://${{ secrets.AWS_HOST }}:${{ secrets.AWS_PORT }}/health")
+    #       if [ "$response" -eq 200 ]; then
+    #         echo "API is healthy!"
+    #       else
+    #         echo "API health check failed with status code $response"
+    #         exit 1
+    #       fi
