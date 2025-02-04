@@ -20,8 +20,7 @@ app.get('/', (req, res) => {
         </style>
       </head>
       <body>
-        <h1>Welcome to Our API!</h1>
-        <p>We are glad you're here. Explore our routes to learn more!</p>
+        <h1>Hi</h1>
         <button class="button" onclick="window.location.href='/health'">Check Health Status</button>
       </body>
     </html>
