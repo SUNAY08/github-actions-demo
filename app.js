@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Basic Route
-app.get('/', (req, res) => res.send('Hello guys chai pee lo!'));
+app.get('/', (req, res) => res.send('hii is everyything running fine'));
 
 // Health Check Route
 app.get('/health', (req, res) => res.json({ status: 'UP' }));
