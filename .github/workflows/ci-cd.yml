@@ -13,92 +13,43 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Ensure SSH Key is properly set up
-      - name: Setup SSH Key and Configure Known Hosts
+      - name: Setup SSH Key
         run: |
-          # Ensure SSH directory exists
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-
-          # Decode and write the private key to ~/.ssh/id_rsa
           echo "${{ secrets.AWS_SSH_PRIVATE_KEY }}" | base64 --decode > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-
-          # Start SSH agent and add the key
           eval $(ssh-agent -s)
           ssh-add ~/.ssh/id_rsa
-
-          # Debug: Print SSH key details
-          ls -lah ~/.ssh/
-          cat ~/.ssh/id_rsa.pub || echo "Public key not available"
-
-          # Add EC2 host to known_hosts
           ssh-keyscan -H "${{ secrets.AWS_HOST }}" >> ~/.ssh/known_hosts
-          chmod 644 ~/.ssh/known_hosts
 
-      # Debug: Show environment variables
-      - name: Log Environment Variables
-        run: |
-          echo "AWS_USERNAME: ${{ secrets.AWS_USERNAME }}"
-          echo "AWS_HOST: ${{ secrets.AWS_HOST }}"
-          echo "AWS_REGION: ${{ secrets.AWS_REGION }}"
-
-      # Test SSH Connection
-      - name: Test SSH Connection
-        run: |
-          ssh -v -o StrictHostKeyChecking=no "${{ secrets.AWS_USERNAME }}"@"${{ secrets.AWS_HOST }}" "echo 'SSH Connection Successful'"
-
-      # Deploy: Pull latest changes, install dependencies, and restart app
       - name: Deploy Application
         run: |
           ssh -o StrictHostKeyChecking=no "${{ secrets.AWS_USERNAME }}"@"${{ secrets.AWS_HOST }}" << 'EOF'
-            # Ensure app directory exists
-            mkdir -p /home/"${{ secrets.AWS_USERNAME }}"/app
-            cd /home/"${{ secrets.AWS_USERNAME }}"/app || exit 1
+            # Navigate to app directory
+            APP_DIR="/home/${{ secrets.AWS_USERNAME }}/app"
+            mkdir -p ${APP_DIR}
+            cd ${APP_DIR}
 
-            # Ensure Git is installed
-            if ! command -v git &> /dev/null; then
-              echo "Git not found, installing..."
-              sudo apt update && sudo apt install -y git
-            fi
-
-            # Clone repo if it's missing
+            # Clone or pull latest code
             if [ ! -d ".git" ]; then
-              echo "Repository not found, cloning..."
               git clone https://github.com/SUNAY08/github-actions-demo.git .
             else
-              echo "Pulling latest changes..."
-              git pull origin main
+              git fetch origin
+              git reset --hard origin/main
             fi
 
-            # Ensure Node.js and npm are installed
-            if ! command -v node &> /dev/null || ! command -v npm &> /dev/null; then
-              echo "Node.js and npm not found, installing..."
+            # Install dependencies
+            if ! command -v node &> /dev/null; then
+              sudo apt update
               curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
               sudo apt install -y nodejs
             fi
 
-            # Install dependencies
             npm install
 
-            # Ensure pm2 is installed
-            if ! command -v pm2 &> /dev/null; then
-              echo "PM2 not found, installing..."
-              npm install -g pm2
-            fi
-
-            # Start or restart the app
-            pm2 start app.js --name my-app || pm2 restart my-app
-
-            echo "Deployment complete!"
-          EOF
-
-      # Start the server
-      - name: Start Server
-        run: |
-          ssh -o StrictHostKeyChecking=no "${{ secrets.AWS_USERNAME }}"@"${{ secrets.AWS_HOST }}" << 'EOF'
-            # Start server (this is where you can run your specific command to start the server)
-            pm2 start /home/"${{ secrets.AWS_USERNAME }}"/app/app.js --name "my-app"
-            # Optional: If you're using a specific server setup, add the command here to start it
+            # Stop any existing node process and start new one
+            pkill node || true
+            nohup node app.js > app.log 2>&1 &
             echo "Server started successfully!"
           EOF
