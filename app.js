@@ -20,7 +20,7 @@ app.get('/', (req, res) => {
         </style>
       </head>
       <body>
-        <h1>Hi</h1>
+        <h1>HELLO GUYS</h1>
         <button class="button" onclick="window.location.href='/health'">Check Health Status</button>
       </body>
     </html>
