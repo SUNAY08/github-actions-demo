@@ -1,0 +1,38 @@
+name: Semantic Versioning
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  versioning:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Generate Semantic Version
+        id: semver
+        uses: Monotype/fonttools-semver-release/semver@main
+        with:
+          prefix: V
+          pre-tok: pre
+
+      - name: Store Version in Artifact
+        run: echo "${{ steps.semver.outputs.semver }}" > version.txt
+
+      - name: Upload Version Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: version
+          path: version.txt
+
+      - name: Create GitHub Release
+        uses: Monotype/fonttools-semver-release/release@main
+        with:
+          generateReleaseNotes: true
+          name: "App Version ${{ steps.semver.outputs.semver }}"
+          tag: ${{ steps.semver.outputs.version }}"
