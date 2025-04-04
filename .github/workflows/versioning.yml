@@ -7,32 +7,32 @@ on:
       - develop
 
 jobs:
-  versioning:
+  version:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Generate Semantic Version
+      - name: Semantic Versioning
         id: semver
         uses: Monotype/fonttools-semver-release/semver@main
         with:
-          prefix: V
-          pre-tok: pre
-
-      - name: Store Version in Artifact
-        run: echo "${{ steps.semver.outputs.semver }}" > version.txt
-
-      - name: Upload Version Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: version
-          path: version.txt
+          prefix: V           # Version prefix (e.g., V1.2.3)
+          pre-tok: pre        # Optional pre-release tag (remove if not needed)
 
       - name: Create GitHub Release
         uses: Monotype/fonttools-semver-release/release@main
         with:
           generateReleaseNotes: true
-          name: "App Version ${{ steps.semver.outputs.semver }}"
-          tag: ${{ steps.semver.outputs.version }}"
+          name: "Release ${{ steps.semver.outputs.semver }}"
+          tag: ${{ steps.semver.outputs.version }}
+
+      - name: Save version to file
+        run: echo "${{ steps.semver.outputs.semver }}" > version.txt
+
+      - name: Upload version.txt as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: version
+          path: version.txt
